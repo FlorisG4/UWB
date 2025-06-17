@@ -1,54 +1,38 @@
-function total_phase = apply_phase_errors(phase_shift, virtual_pos, t, varargin)
-% COMPUTE_PHASE_TAGLIAFERRI Adds Tagliaferri-style CFO, TO, and position error
-% Inputs:
-%   phase_shift     - Ideal geometric phase [n_el x 1 or n_el x n_samples]
-%   virtual_pos     - Virtual positions [n_el x 1] (m)
-%   t               - Time vector [1 x n_samples] (s)
+function phase_offset = apply_phase_errors(virtual_pos_i, t, theta, beta, kappa)
+% APPLY_PHASE_ERRORS Generates residual phase offset for a single element
 %
-% Name-Value Optional Inputs:
-%   'fn'            - Carrier frequency [Hz] (default 78e9)
-%   'beta'          - Normalized CFO per element (Hz/Hz, i.e., Δf/fn) [n_el x 1]
-%   'kappa'         - TO (timing offset) per element [s] [n_el x 1]
-%   'delta_pos'     - Position errors per element [m] [n_el x 1]
-%   'theta'         - Angle of arrival [rad] (default 0)
+% Inputs:
+%   virtual_pos_i - scalar position of this virtual element [m]
+%   t             - time vector [1 x n_samples]
+%   theta         - angle of arrival [rad]
+%   beta          - normalized CFO (scalar, per unit)
+%   kappa         - TO in seconds (scalar, per unit)
+%   delta_pos     - optional positional error for this element [m]
 %
 % Output:
-%   total_phase     - Phase shift including errors [n_el x n_samples]
+%   phase_offset  - 1 x n_samples vector of phase error (radians)
 
-% === Parse Inputs ===
-p = inputParser;
-addParameter(p, 'fn', 78e9);
-addParameter(p, 'beta', zeros(size(virtual_pos)));
-addParameter(p, 'kappa', zeros(size(virtual_pos)));
-addParameter(p, 'delta_pos', zeros(size(virtual_pos)));
-addParameter(p, 'theta', 0);  % angle of arrival
-parse(p, varargin{:});
-
-fn = p.Results.fn;
-beta = p.Results.beta(:);
-kappa = p.Results.kappa(:);
-delta_pos = p.Results.delta_pos(:);
-theta = p.Results.theta;
+% Constants
+fn = 78e9;
 lambda = 3e8 / fn;
 c = 3e8;
 
-% === Matrix Expansion ===
-n_el = length(virtual_pos);
-n_samples = length(t);
-t_mat = repmat(t, n_el, 1);
+% Default zero offset
+phase_offset = zeros(1, length(t));
 
-% === Tagliaferri 2024 Phase Terms ===
-% 1. Carrier Frequency Offset (CFO): α_nm = 2π f_n β_nm t
-phi_CFO = 2 * pi * fn * beta .* t_mat;
+% Apply Localization error 
+delta_pos = 1e-3 * randn();  % 1 mm std
 
-% 2. Time Offset (TO): 2π f_n * kappa
-phi_TO = -2 * pi * fn * repmat(kappa, 1, n_samples);
+phi_geom = -2 * pi * fn / c * delta_pos * sin(theta);  % constant offset
+phase_offset = phase_offset + phi_geom;
 
-% 3. Localization Error: Δpos * sin(θ)
-phi_geom = -2 * pi * fn / c * (delta_pos .* sin(theta));
-phi_geom = repmat(phi_geom, 1, n_samples);
 
-% === Total Phase ===
-total_phase = phase_shift + phi_CFO + phi_TO + phi_geom;
+% Apply CFO and TO only to right-side elements
+if virtual_pos_i > 0    
+    % Phase components
+    phi_CFO = 2 * pi * fn * beta * t;                           % time-varying
+    phi_TO = -2 * pi * fn * kappa;                              % constant
 
+    phase_offset = phi_CFO + phi_TO;
+end
 end
