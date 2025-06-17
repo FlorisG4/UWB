@@ -1,10 +1,11 @@
 function [kappa_est, tof_nm] = estimate_kappa(I_nm,I_ref, tx_pos_CS, beta_est)
 
-c = 3e8;                  % Speed of light [m/s]
-fc = 78e9;      
-Fs = 10e6;                % Sampling frequency [Hz]
-T_chirp = 25.6e-6;        % Chirp duration [s]
-BW = 250e6;     
+P = uwb_params();
+c = P.c;
+fc = P.fc;
+Fs = P.Fs;
+T_chirp = P.T_chirp;
+BW = P.BW;
 N_fft =1024;
 N_ffta = 1024;
 range_axis = ((0:N_fft/2-1) * Fs / N_fft) * (c * T_chirp / (2 * BW));

@@ -12,10 +12,11 @@ function phase_offset = apply_phase_errors(virtual_pos_i, t, theta, beta, kappa)
 % Output:
 %   phase_offset  - 1 x n_samples vector of phase error (radians)
 
-% Constants
-fn = 78e9;
-lambda = 3e8 / fn;
-c = 3e8;
+% --- Constants
+P = uwb_params();
+fn = P.fc;
+lambda = P.lambda;
+c = P.c;
 
 % Default zero offset
 phase_offset = zeros(1, length(t));
