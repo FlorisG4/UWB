@@ -54,3 +54,4 @@ virtual_pos_cells{2} = virtual_pos_r;
 
 % Optional combined arrays (if you still want them for global processing)
 virtual_pos = sort([virtual_pos_l, virtual_pos_r]);
+

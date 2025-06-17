@@ -1,4 +1,4 @@
-function [rx_pos_CS, tx_pos_CS] = estimate_sensor_transformations(rx_pos, tx_pos, I)
+function [rx_pos_CS, tx_pos_CS, virtual_pos_CS] = estimate_sensor_transformations(rx_pos, tx_pos, virtual_pos, I)
 % Coarse synchronization: align monostatic images via rigid-body transform
 % Input: I - cell array where I{n,n} is monostatic image of radar n
 % Output:
@@ -54,6 +54,7 @@ ref_center = 0;
 
 tx_pos_CS{1} = tx_pos{1};
 rx_pos_CS{1} = rx_pos{1};
+virtual_pos_CS{1} = virtual_pos(:,1:2);
 
 for n = 2:N
     R = [cos(rotations(n)), -sin(rotations(n));
@@ -67,6 +68,20 @@ for n = 2:N
     % --- RX elements ---
     for k = 1:size(rx_pos{n},1)
         rx_pos_CS{n}(k,:) = (R * (rx_pos{n}(k,:) - ref_center)')' + translations(n,:);
+    end
+end
+   % Initialize full 2×2 virtual array cell
+virtual_pos_CS = cell(N, N);  % N = number of radars
+
+for n = 1:N          % TX radar
+    for m = 1:N      % RX radar
+        virtual_pos = [];
+        for i = 1:size(tx_pos_CS{n}, 1)
+            for j = 1:size(rx_pos_CS{m}, 1)
+                virtual_pos(end+1, :) = tx_pos_CS{n}(i,:) + rx_pos_CS{m}(j,:);
+            end
+        end
+        virtual_pos_CS{n, m} = virtual_pos;
     end
 end
 

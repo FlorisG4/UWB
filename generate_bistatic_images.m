@@ -17,7 +17,6 @@ for n = 1:N
         % === Range FFT
         range_fft = fft(rx_signals, N_fft, 2);
         range_fft = range_fft(:, 1:N_fft/2);
-        range_fft = flipud(range_fft);
 
         % === Angle FFT
         RAOA = fftshift(fft(range_fft, N_ffta, 1), 1);

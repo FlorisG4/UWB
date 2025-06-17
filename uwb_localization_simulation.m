@@ -26,7 +26,7 @@ Baseline = 0.05 ; %Baseline in (m)
 [tx_pos,rx_pos,virtual_pos,~] = create_array(N_tx,N_rx,d,Baseline);
 
 virtual_pos_x_sep = virtual_pos(:,[1,3]);
-virtual_pos_x = [virtual_pos_x_sep(:,1); virtual_pos_x_sep(:,2)]; 
+virtual_pos_x = [virtual_pos_x_sep(:,1); virtual_pos_x_sep(:,2)];  
 
 n_radars = 2;
 n_elements_per_radar = length(virtual_pos_x)/n_radars;
@@ -36,7 +36,7 @@ radar_indices = reshape(1:length(virtual_pos_x), n_elements_per_radar, n_radars)
 I = cell(n_radars, n_radars);  % only monostatic for now
 
 % ===  Visualize the array === %
-% plot_mimo_array(tx_pos, rx_pos,virtual_pos);
+% plot_mimo_array(sort([tx_pos{1}(:,1), tx_pos{2}(:,1)]), sort([rx_pos{1}(:,1),rx_pos{2}(:,1)]),virtual_pos_x);
 
 % ===  Compute minimum ff distance for Baseline === %
 D= max(virtual_pos_x) - min(virtual_pos_x); %aperture size of whole array in m
@@ -49,9 +49,9 @@ R_max = Fs * c * T_chirp / (4 * BW);
 
 fprintf('Pick a target in the range: (%.2f - %.2f) meters\n', R_ff, R_max);
 %% === Target Setup ===
-targets = [40, deg2rad(0);   % [Range (m), Angle (rad)]
-           50,deg2rad(0)];
-            % 30, deg2rad(0)];
+targets = [40, deg2rad(10);   % [Range (m), Angle (rad)]
+            50,deg2rad(-10);
+             30, deg2rad(0)];
 
 if any(targets(:,1) < R_ff)
     error('One or more targets are in the near field — computation not valid.');
@@ -176,7 +176,7 @@ end
 
 % Step 2.1
 % Find best correlation between I_ref and different shifts and rotations
-[rx_pos_CS, tx_pos_CS] = estimate_sensor_transformations(rx_pos,tx_pos,I);
+[rx_pos_CS, tx_pos_CS, virtual_pos_CS] = estimate_sensor_transformations(rx_pos,tx_pos,virtual_pos,I);
 
 % % Step 2.2
 % % ===Reconstructed Virtual Array Positions ===
@@ -207,8 +207,8 @@ end
 % 
 % % generate_localization_plots(rx_signals_corrected,SNR_dB,Fs,T_chirp,c,BW,n_targets)
 
-%Step 2.3
-
+%Step 2.2 and 2.3
+% % ===Reconstructed Virtual Array Positions ===
 for n = 1:n_radars
     for m = 1:n_radars
         tx = tx_pos_CS{n};  % TX positions for radar n
@@ -229,11 +229,13 @@ for n = 1:n_radars
                 R = targets(tgt, 1);
                 theta = targets(tgt, 2);
                 fb = 2 * BW * R / (c * T_chirp);
-                u_hat = [cos(theta), sin(theta)];
+                u_hat = [sin(theta), cos(theta)];
                 proj = dot(virtual_pos(el,:), u_hat);
                 phi = 2 * pi * proj / lambda;
-
+                phase_offsets = apply_phase_errors(virtual_pos(el,1), t, theta, beta/fc, kappa);
+               
                 signal_el = signal_el + exp(1j * (2*pi*fb*t + phi));
+                signal_el = signal_el + exp(1j * (2*pi*fb*t + phi + phase_offsets));
             end
             rx_signals(el,:) = signal_el;
         end
@@ -248,58 +250,150 @@ end
 
 I_CS = generate_bistatic_images(rx_signals_all,N_fft,N_ffta);
 
-% Angle axis for linear array along x
-angle_axis = asind(linspace(-1, 1, N_ffta));
-angle_axis = angle_axis;  % or +90 depending on the direction
 
 
-
-figure;
-imagesc(angle_axis, range_axis, 20*log10(abs(I_CS{1,2}')./max(abs(I_CS{1,2}(:)))));
-xlabel('Angle (deg)');
-ylabel('Range (m)');
-title('Bistatic Image I_{1,2}');
-colormap jet; colorbar; caxis([-40 0]);
-set(gca, 'YDir', 'normal');  % range = 0 at bottom, increasing upward
+% figure;
+% imagesc(angle_axis, range_axis, 20*log10(abs(I_CS{1,2}')./max(abs(I_CS{1,2}(:)))));
+% xlabel('Angle (deg)');
+% ylabel('Range (m)');
+% title('Bistatic Image I_{1,2}');
+% colormap jet; colorbar; caxis([-40 0]);
+% set(gca, 'YDir', 'normal');  % range = 0 at bottom, increasing upward
 
 
 figure;
-imagesc(angle_axis, range_axis, 20*log10(abs(I_CS{2,1}')./max(abs(I_CS{1,2}(:)))));
+imagesc(angle_axis, range_axis, 20*log10(abs(I_CS{2,1}')./max(abs(I_CS{2,1}(:)))));
 xlabel('Angle (deg)');
 ylabel('Range (m)');
-title('Bistatic Image I_{1,2}');
+title('Bistatic Image I_{2,1}');
 colormap jet; colorbar; caxis([-40 0]);
-set(gca, 'YDir', 'normal');  % range = 0 at bottom, increasing upward
+set(gca, 'YDir', 'normal');  
+
+%Kappa estimation
+% Find peak pixels
+% Find peaks
+I_ref = I{1,1};
+I_nm = I_CS{1,2};
+I_mn = I_CS{2,1};
+
+[kappa_est_nm, tof_nm] = estimate_kappa(I_nm, I_ref, tx_pos_CS,beta_est);
+[kappa_est_mn, tof_mn] = estimate_kappa(I_mn, I_ref, tx_pos_CS,beta_est);
+
+fprintf("Actual TO kappa is: %.3e \n", kappa);
+
+fprintf("Estimated TO kappa_nm: %.3e \n", kappa_est_nm );
+fprintf("Estimated TO kappa_mn: %.3e \n", kappa_est_mn );
+
+% Subtracting the errors
+t_corr_nm = (1)*tof_nm + kappa_est_nm;
+t_corr_mn = (1+beta_est)*tof_mn + kappa_est_mn;
+
+phase_corr_nm = exp(+j*2*pi*fc*(1)*tof_nm) ;
+phase_corr_mn = exp(+j*2*pi*fc*(1+beta_est)*tof_mn) ;
+
+% Physical units in meters
+x_min = -90; x_max = 90;     % lateral axis
+y_min =  0; y_max = 76.80;     % range axis (downfield)
+N_x = 1024;  % number of pixels in x
+N_y = 512;  % number of pixels in y
+x_vals = linspace(x_min, x_max, N_x);
+y_vals = linspace(y_min, y_max, N_y);
+[image_grid_x, image_grid_y] = meshgrid(x_vals, y_vals);  % size: [N_y × N_x]
+
+
+[Ny, Nx] = size(image_grid_x);  % number of pixels
+I_nm = zeros(Nx, Ny);           % final image
+I_mn = zeros(Nx, Ny);
+
+
+% Caluclating n_m
+kappa = kappa_est_nm;
+tx_pos = tx_pos_CS{1,1};          % TX positions (3×2)
+rx_pos = rx_pos_CS{1,2};          % RX positions (4×2)
+virtual_pos = virtual_pos_CS{1,2};  % (12×2)
+
+
+for yi = 1:Ny  % range (rows)
+    for xi = 1:Nx  % angle (columns)
+        x = [image_grid_x(yi, xi), image_grid_y(yi, xi)];  % [x y]
+
+        % === Compute TOF for each virtual element ===
+        for el = 1:size(virtual_pos,1)
+            tx = tx_pos(mod(el-1,N_tx)+1, :);
+            rx = rx_pos(floor((el-1)/N_tx)+1, :);
+
+            tof = (norm(x - tx) + norm(x - rx)) / c;
+            t_corr = (1) * tof + kappa;
+
+            % Interpolate signal at corrected time
+            s = interp1(t, rx_signals_all{1,2}(el,:), t_corr, 'linear', 0);
+
+            % Phase correction
+            phase = exp(1j * 2 * pi * fc * (1) * tof);
+
+            % Accumulate contribution
+            I_nm(xi, yi) = I_nm(xi, yi) + s * phase;
+        end
+    end
+end
+I_CS{1,2} = I_nm;
+
+% Caluclating m_n
+beta = beta_est;
+kappa = kappa_est_mn;
+tx_pos = tx_pos_CS{1,2};          % TX positions (3×2)
+rx_pos = rx_pos_CS{1,1};          % RX positions (4×2)
+virtual_pos = virtual_pos_CS{2,1};  % (12×2)
+
+
+for yi = 1:Ny  % range (rows)
+    for xi = 1:Nx  % angle (columns)
+        x = [image_grid_x(yi, xi), image_grid_y(yi, xi)];  % [x y]
+
+        % === Compute TOF for each virtual element ===
+        for el = 1:size(virtual_pos,1)
+            tx = tx_pos(mod(el-1,N_tx)+1, :);
+            rx = rx_pos(floor((el-1)/N_tx)+1, :);
+
+            tof = (norm(x - tx) + norm(x - rx)) / c;
+            t_corr = (1+beta) * tof + kappa;
+
+            % Interpolate signal at corrected time
+            s = interp1(t, rx_signals_all{2,1}(el,:), t_corr, 'linear', 0);
+
+            % Phase correction
+            phase = exp(1j * 2 * pi * fc * (1 + beta) * tof);
+
+            % Accumulate contribution
+            I_mn(xi, yi) = I_mn(xi, yi) + s * phase;
+        end
+    end
+end
+I_CS{2,1} = I_mn;
+
+
+figure;
+imagesc(angle_axis, range_axis, 20*log10(abs(I_mn')./max(abs(I_mn(:)))));
+xlabel('Angle (deg)');
+ylabel('Range (m)');
+title('Fused Image, Phase corrected');
+colormap jet; colorbar; caxis([-40 0]);
+set(gca, 'YDir', 'normal');
+
+% === Step 3: Bistatic image fusion ===
+
+
+
+% I_fused = fuse_bistatic_images(I_CS, I, 'coherent');
+
+% figure;
+% imagesc(angle_axis, range_axis, 20*log10(abs(I_fused')./max(abs(I_fused(:)))));
+% xlabel('Angle (deg)');
+% ylabel('Range (m)');
+% title('Fused Image');
+% colormap jet; colorbar; caxis([-40 0]);
+% set(gca, 'YDir', 'normal');
 
 
 
 
-
-
-
-% %% === Reconstructed Signal Generation ===
-% t = 0:1/Fs:T_chirp-1/Fs;
-% n_samples = length(t);
-% rx_signals = zeros(length(virtual_pos_CS), n_samples);
-% 
-% for el = 1:length(virtual_pos_CS)
-%     rx_signals_el = zeros(1, n_samples);  % for accumulation over targets
-% 
-%     for tgt = 1:n_targets
-%         R = targets(tgt, 1);
-%         theta = targets(tgt, 2);
-% 
-%         fb = 2 * BW * R / (c * T_chirp);  % Beat frequency
-% 
-%      % === Corrected signal (no artificial errors)
-%     phase_shift_corrected = 2 * pi * virtual_pos_CS{n}(el,1) * sin(theta) / lambda;
-%     signal_corrected = exp(1j * (2*pi*fb*t + phase_shift_corrected));
-%     rx_signals_el = rx_signals_el + signal_corrected;
-% 
-%     end
-% 
-%     % Store final signal after all targets added
-%     rx_signals(el,:) = rx_signals_el;
-% 
-% end
-% 
