@@ -7,12 +7,13 @@
 clear; clc;
 
 %% === Simulation Parameters ===
-c = 3e8;                  % Speed of light [m/s]
-fc = 78e9;                % Carrier frequency [Hz]
-lambda = c / fc;          % Wavelength [m]
-Fs = 10e6;                % Sampling frequency [Hz]
-T_chirp = 25.6e-6;        % Chirp duration [s]
-BW = 250e6;                % Bandwidth [Hz]
+P = uwb_params();
+c = P.c;
+fc = P.fc;
+lambda = P.lambda;
+Fs = P.Fs;
+T_chirp = P.T_chirp;
+BW = P.BW;
 SNR_dB = 20;              % Signal-to-noise ratio
 n_chirps = 16;
 
@@ -67,9 +68,9 @@ t = 0:1/Fs:T_chirp-1/Fs;
 n_samples = length(t);
 rx_signals = zeros(length(virtual_pos_x), n_samples);
 
-%Parameters for offsets
-beta = 100 * randn(); %  CFO parameter
-kappa = 1e-9 * randn();  % TO parameter
+% Parameters for true offsets
+beta_true = 100 * randn();  % CFO frequency offset [Hz]
+kappa = 1e-9 * randn();     % TO parameter [s]
 beta_values = [];
 
 for el = 1:length(virtual_pos_x)
@@ -86,7 +87,7 @@ for el = 1:length(virtual_pos_x)
         signal_ideal = exp(1j * (2*pi*fb*t + phase_shift_ideal));
 
         % === Corrupted signal
-        phase_offsets = apply_phase_errors(virtual_pos_x(el), t, theta, beta/fc, kappa); % NOTE: normalized beta
+        phase_offsets = apply_phase_errors(virtual_pos_x(el), t, theta, beta_true/fc, kappa); % NOTE: normalized beta
         phase_shift_corrup = phase_shift_ideal + phase_offsets;
         signal_corrup = exp(1j * (2*pi*fb*t + phase_shift_corrup));
 
@@ -97,8 +98,8 @@ for el = 1:length(virtual_pos_x)
         if el > 12 && tgt == 1
             phi_residual = unwrap(angle(signal_corrup ./ signal_ideal));
             p = polyfit(t, phi_residual, 1);
-            beta_est = p(1) / (2 * pi * fc);
-            beta_values(end+1) = beta_est;
+            beta_tmp = p(1) / (2 * pi * fc);  % normalized CFO
+            beta_values(end+1) = beta_tmp;
         end
     end
 
@@ -107,8 +108,9 @@ for el = 1:length(virtual_pos_x)
 end
 
 % === Final estimate across all right-side elements
-beta_est = mean(beta_values, 'omitnan')*fc;
-fprintf("Estimated CFO beta: %.3e (Δf ≈ %.2f Hz)\n", beta_est, beta_est);
+beta_est_norm = mean(beta_values, 'omitnan');
+beta_est = beta_est_norm * fc;  % frequency offset in Hz
+fprintf("Estimated CFO beta: %.3e (Δf ≈ %.2f Hz)\n", beta_est_norm, beta_est);
 
 
  %% === Add Noise ===
@@ -232,7 +234,7 @@ for n = 1:n_radars
                 u_hat = [sin(theta), cos(theta)];
                 proj = dot(virtual_pos(el,:), u_hat);
                 phi = 2 * pi * proj / lambda;
-                phase_offsets = apply_phase_errors(virtual_pos(el,1), t, theta, beta/fc, kappa);
+                phase_offsets = apply_phase_errors(virtual_pos(el,1), t, theta, beta_true/fc, kappa);
                
                 signal_el = signal_el + exp(1j * (2*pi*fb*t + phi));
                 signal_el = signal_el + exp(1j * (2*pi*fb*t + phi + phase_offsets));
@@ -276,8 +278,8 @@ I_ref = I{1,1};
 I_nm = I_CS{1,2};
 I_mn = I_CS{2,1};
 
-[kappa_est_nm, tof_nm] = estimate_kappa(I_nm, I_ref, tx_pos_CS,beta_est);
-[kappa_est_mn, tof_mn] = estimate_kappa(I_mn, I_ref, tx_pos_CS,beta_est);
+[kappa_est_nm, tof_nm] = estimate_kappa(I_nm, I_ref, tx_pos_CS, beta_est_norm);
+[kappa_est_mn, tof_mn] = estimate_kappa(I_mn, I_ref, tx_pos_CS, beta_est_norm);
 
 fprintf("Actual TO kappa is: %.3e \n", kappa);
 
@@ -285,11 +287,11 @@ fprintf("Estimated TO kappa_nm: %.3e \n", kappa_est_nm );
 fprintf("Estimated TO kappa_mn: %.3e \n", kappa_est_mn );
 
 % Subtracting the errors
-t_corr_nm = (1)*tof_nm + kappa_est_nm;
-t_corr_mn = (1+beta_est)*tof_mn + kappa_est_mn;
+t_corr_nm = (1) * tof_nm + kappa_est_nm;
+t_corr_mn = (1 + beta_est_norm) * tof_mn + kappa_est_mn;
 
-phase_corr_nm = exp(+j*2*pi*fc*(1)*tof_nm) ;
-phase_corr_mn = exp(+j*2*pi*fc*(1+beta_est)*tof_mn) ;
+phase_corr_nm = exp(1j * 2 * pi * fc * (1) * tof_nm);
+phase_corr_mn = exp(1j * 2 * pi * fc * (1 + beta_est_norm) * tof_mn);
 
 % Physical units in meters
 x_min = -90; x_max = 90;     % lateral axis
@@ -339,7 +341,7 @@ end
 I_CS{1,2} = I_nm;
 
 % Caluclating m_n
-beta = beta_est;
+beta = beta_est_norm;
 kappa = kappa_est_mn;
 tx_pos = tx_pos_CS{1,2};          % TX positions (3×2)
 rx_pos = rx_pos_CS{1,1};          % RX positions (4×2)
@@ -356,7 +358,7 @@ for yi = 1:Ny  % range (rows)
             rx = rx_pos(floor((el-1)/N_tx)+1, :);
 
             tof = (norm(x - tx) + norm(x - rx)) / c;
-            t_corr = (1+beta) * tof + kappa;
+            t_corr = (1 + beta) * tof + kappa;
 
             % Interpolate signal at corrected time
             s = interp1(t, rx_signals_all{2,1}(el,:), t_corr, 'linear', 0);
