@@ -1,3 +1,4 @@
+% Parse raw TI radar data captured via CCS
 load('CorrectionCoefficients_colours.mat');
 RadarID = input('Select Radar ID: 1 (green), 2 (yellow), 3 (blue), 4 (red): ');
 switch RadarID

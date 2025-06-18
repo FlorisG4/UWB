@@ -1,4 +1,5 @@
 function I_fused = fuse_bistatic_images(I_CS, I, method)
+% Performs coherent or magnitude fusion of radar pair images
 %FUSE_BISTATIC_IMAGES Coherently fuse monostatic and bistatic images.
 %   I_fused = fuse_bistatic_images(I_CS, METHOD) combines the images stored
 %   in cell array I_CS. If METHOD is 'coherent' (default) the images are

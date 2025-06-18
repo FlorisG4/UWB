@@ -1,4 +1,5 @@
 function plot_mimo_array(tx_pos, rx_pos, virtual_pos)
+% Simple helper to visualize antenna geometry
     figure; hold on; grid on; axis equal;
 
     % Plot and save handles

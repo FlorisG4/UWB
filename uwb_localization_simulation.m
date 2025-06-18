@@ -4,6 +4,7 @@
 % 
 % =========================================================================
 
+% Main script to simulate a dual-radar MIMO localization scenario
 clear; clc;
 
 %% === Simulation Parameters ===
@@ -96,6 +97,7 @@ for el = 1:length(virtual_pos_x)
         rx_signals_el = rx_signals_el + signal_corrup;
 
         % === Estimate CFO (only for one target and right-side elements)
+        % Derive CFO by measuring residual phase slope
         if el > 12 && tgt == 1
             phi_residual = unwrap(angle(signal_corrup ./ signal_ideal));
             p = polyfit(t, phi_residual, 1);
@@ -549,3 +551,4 @@ shading flat; colormap jet; caxis([-40 0]);
 xlabel('Angle (deg)'); ylabel('Range (m)');
 title('Ideal sync fusion plot');
 hold off
+

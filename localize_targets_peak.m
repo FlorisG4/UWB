@@ -1,4 +1,5 @@
 function [est_ranges, est_angles, peak_values] = localize_targets_peak(RAOA, range_axis, angle_axis, n_targets, displayResults)
+% Uses simple peak picking on the RA map to estimate target locations
 % LOCALIZE_TARGETS_PEAK - Estimate [range, angle] of multiple targets from RAOA map
 %
 % Inputs:
@@ -41,3 +42,4 @@ function [est_ranges, est_angles, peak_values] = localize_targets_peak(RAOA, ran
         fprintf('  ---------------------------------------------\n\n');
     end
 end
+
