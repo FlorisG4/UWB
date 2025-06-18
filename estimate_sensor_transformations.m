@@ -11,8 +11,8 @@ rotations = zeros(N,1);
 translations = zeros(N,2);
 
 % --- Parameters for search ---
-theta_range = deg2rad(-5:1:5);     % Search over small rotation angles
-shift_range = -5:5;                % Search over pixel shifts (can refine later)
+theta_range = deg2rad(-5:0.5:5);     % Search over small rotation angles
+shift_range = -10:10;                % Search over pixel shifts (can refine later)
 [dx_grid, dy_grid] = meshgrid(shift_range, shift_range);
 
 for n = 2:N
