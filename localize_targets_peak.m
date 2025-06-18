@@ -1,6 +1,6 @@
 function [est_ranges, est_angles, peak_values] = localize_targets_peak(RAOA, range_axis, angle_axis, n_targets, displayResults)
 % LOCALIZE_TARGETS_PEAK - Estimate [range, angle] of multiple targets from RAOA map
-%
+% % Uses simple peak picking on the RA map to estimate target locations
 % Inputs:
 %   RAOA_mag       - Magnitude of the range-angle map [angle_bins x range_bins]
 %   range_axis     - Vector of range values corresponding to rows of RAOA

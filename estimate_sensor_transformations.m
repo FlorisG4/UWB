@@ -1,4 +1,5 @@
 function [rx_pos_CS, tx_pos_CS, virtual_pos_CS] = estimate_sensor_transformations(rx_pos, tx_pos, virtual_pos, I)
+% Estimate relative rotations and translations between radar units
 % Coarse synchronization: align monostatic images via rigid-body transform
 % Input: I - cell array where I{n,n} is monostatic image of radar n
 % Output:
@@ -15,10 +16,11 @@ theta_range = deg2rad(-5:0.5:5);     % Search over small rotation angles
 shift_range = -10:10;                % Search over pixel shifts (can refine later)
 [dx_grid, dy_grid] = meshgrid(shift_range, shift_range);
 
-for n = 2:N
+for n = 1:N
     I_n = abs(I{n,n});
     best_corr = -Inf;
     best_theta = 0;
+    % Exhaustive search over small rotations and shifts
     best_shift = [0,0];
     
     for theta = theta_range
