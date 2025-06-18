@@ -1,4 +1,5 @@
 function I_CS = generate_bistatic_images(rx_signals_all, N_fft, N_ffta)
+% Converts raw beat signals into range-angle images for each radar pair
 % Generate bistatic images from actual received signals
 % Inputs:
 %   rx_signals_all  - cell{n,m} of [N_virtual × time] beat signals
