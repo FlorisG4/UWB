@@ -1,4 +1,5 @@
 function [] = generate_localization_plots(rx_signals,SNR_dB,Fs,T_chirp,c,BW,n_targets)
+% Generate range-angle map plots and estimate peak locations
  % === Add Noise ===
 signal_power = var(rx_signals(:));
 noise_power = signal_power / 10^(SNR_dB/10);

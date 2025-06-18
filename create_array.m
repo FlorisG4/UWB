@@ -1,5 +1,7 @@
 function [tx_pos,rx_pos,virtual_pos, virtual_pos_cells] = create_array(N_tx,N_rx,d,Baseline)
+%% Creates transmit, receive and virtual arrays for a dual-radar MIMO setup
 
+% Uniform linear arrays for TX and RX 
 tx_pos = ((0:N_tx-1) - (N_tx-1)/2) * 4*d;
 rx_pos = ((0:N_rx-1) - (N_rx-1)/2) * d;
 
@@ -9,6 +11,7 @@ y_rx = zeros(size(rx_pos));
 
 
 % === Virtual Array Positions ===
+% Build virtual array by combining every TX with every RX
 virtual_pos = [];
 for i = 1:N_tx
     for j = 1:N_rx
@@ -20,6 +23,7 @@ end
 virtual_pos = virtual_pos - mean(virtual_pos);  %  automatic centering
 virtual_pos = sort(virtual_pos);
 
+% Split array around origin to model two separate radars
 
 % Left Radar (Radar 1)
 tx_pos_l = tx_pos - Baseline/2;
@@ -54,4 +58,5 @@ virtual_pos_cells{2} = virtual_pos_r;
 
 % Optional combined arrays (if you still want them for global processing)
 virtual_pos = sort([virtual_pos_l, virtual_pos_r]);
+
 

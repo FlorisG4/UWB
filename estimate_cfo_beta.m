@@ -1,4 +1,5 @@
 function beta_est = estimate_cfo_beta(rx_signals, virtual_pos, t, est_range, est_angle)
+&% Estimates clock frequency offset based on phase drift across right-side array elements
 % ESTIMATE_CFO_BETA - Estimate CFO (beta) from residual phase drift
 %
 % Output:
@@ -8,7 +9,9 @@ function beta_est = estimate_cfo_beta(rx_signals, virtual_pos, t, est_range, est
     fn = P.fc;
     lambda = P.lambda;
     c = P.c;
+    % Compute ideal beat signal for assumed target range
     BW = P.BW;
+    % Consider only elements on the right side of the array
     T_chirp = P.T_chirp;    
 
     fb = 2 * BW * est_range / (c * T_chirp);  % Beat frequency
@@ -27,6 +30,7 @@ function beta_est = estimate_cfo_beta(rx_signals, virtual_pos, t, est_range, est
         phase_diff = unwrap(phase_diff);
 
         % Fit a line to phase_diff vs time → slope = dφ/dt
+        % Linear fit to estimate phase drift over time
         p = polyfit(t, phase_diff, 1);
         dphi_dt = p(1);
 
@@ -38,3 +42,4 @@ function beta_est = estimate_cfo_beta(rx_signals, virtual_pos, t, est_range, est
     % Average over all right-side elements
     beta_est = mean(phase_slopes);
 end
+
