@@ -1,4 +1,5 @@
 function [kappa_est, tof_nm] = estimate_kappa(I_nm,I_ref, tx_pos_CS, beta_est, dB_thr, N_size)
+% Estimate residual time offset between two radars based on image peaks
 
 P = uwb_params();
 c = P.c;
@@ -16,7 +17,7 @@ angle_axis = asind(linspace(-1,1,N_ffta));
 
 [peaks_nm, vals_nm] = find_peaks_2D(I_nm, dB_thr, N_size);
 [peaks_ref, vals_ref] = find_peaks_2D(I_ref, dB_thr, N_size);
-
+% Find corresponding strong peaks in reference and measurement
 % Match closest pair (Euclidean distance)
 min_dist = Inf;
 for i = 1:size(peaks_nm,1)
@@ -44,7 +45,7 @@ u_ref = [cosd(angle_ref), sind(angle_ref)];
 
 x_nm  = range_nm  * u_nm;
 x_ref = range_ref * u_ref;
-
+% Use middle TX of each radar for time-of-flight calculation
 s_n = tx_pos_CS{1,1}(2,:);
 s_m = tx_pos_CS{1,2}(2,:);
 

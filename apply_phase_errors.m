@@ -1,4 +1,5 @@
 function phase_offset = apply_phase_errors(virtual_pos_i, t, theta, beta, kappa)
+% Applies clock frequency offset and time offset errors to a signal
 % APPLY_PHASE_ERRORS Generates residual phase offset for a single element
 %
 % Inputs:
@@ -22,7 +23,7 @@ c = P.c;
 phase_offset = zeros(1, length(t));
 
 % Apply Localization error 
-delta_pos = 1e-3 * randn();  % 1 mm std
+delta_pos = 1e-3;  % 1 mm std %random or not
 phi_geom = -2 * pi * fn / c * delta_pos * sin(theta);  % constant offset
 
 phase_offset = phase_offset + phi_geom;
@@ -34,6 +35,6 @@ if virtual_pos_i > 0
     phi_CFO = 2 * pi * fn * beta * t;                           % time-varying
     phi_TO = -2 * pi * fn * kappa;                              % constant
 
-    phase_offset = phi_CFO + phi_TO;
+    phase_offset = phi_CFO + phi_TO + phi_geom;
 end
 end
