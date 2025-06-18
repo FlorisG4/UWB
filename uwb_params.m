@@ -1,4 +1,5 @@
 function P = uwb_params()
+% Convenience function returning commonly used constants
 %UWB_PARAMS  Central definition of radar constants
 %   P = UWB_PARAMS() returns a struct containing commonly used
 %   parameters for the UWB radar simulations.

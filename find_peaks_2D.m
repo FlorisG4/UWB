@@ -1,4 +1,5 @@
 function [peak_coords, peak_vals] = find_peaks_2D(I, threshold_dB, neighborhood)
+% Utility helper used for simple peak detection in range-angle maps
 % Find local peaks in 2D image above a threshold (in dB)
 % Returns coordinates and peak magnitudes
 %
@@ -24,3 +25,4 @@ BW = BW & (mag > threshold_dB);
 peak_coords = [x, y];  % (col, row)
 peak_vals = mag(sub2ind(size(I), y, x));
 end
+

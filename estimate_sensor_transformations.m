@@ -1,4 +1,5 @@
 function [rx_pos_CS, tx_pos_CS, virtual_pos_CS] = estimate_sensor_transformations(rx_pos, tx_pos, virtual_pos, I)
+% Estimate relative rotations and translations between radar units
 % Coarse synchronization: align monostatic images via rigid-body transform
 % Input: I - cell array where I{n,n} is monostatic image of radar n
 % Output:
@@ -19,6 +20,7 @@ for n = 2:N
     I_n = abs(I{n,n});
     best_corr = -Inf;
     best_theta = 0;
+    % Exhaustive search over small rotations and shifts
     best_shift = [0,0];
     
     for theta = theta_range
