@@ -4,11 +4,12 @@ function beta_est = estimate_cfo_beta(rx_signals, virtual_pos, t, est_range, est
 % Output:
 %   beta_est - estimated normalized CFO for the right-side unit
 
-    fn = 78e9;
-    lambda = 3e8 / fn;
-    c = 3e8;
-    BW = 250e6;
-    T_chirp = 25.6e-6;
+    P = uwb_params();
+    fn = P.fc;
+    lambda = P.lambda;
+    c = P.c;
+    BW = P.BW;
+    T_chirp = P.T_chirp;    
 
     fb = 2 * BW * est_range / (c * T_chirp);  % Beat frequency
     s_ideal = exp(1j * (2 * pi * fb * t));    % Ideal beat signal (no phase shift)

@@ -13,17 +13,18 @@ function phase_offset = apply_phase_errors(virtual_pos_i, t, theta, beta, kappa)
 %   phase_offset  - 1 x n_samples vector of phase error (radians)
 
 % Constants
-fn = 78e9;
-lambda = 3e8 / fn;
-c = 3e8;
+P = uwb_params();
+fn = P.fc;
+lambda = P.lambda;
+c = P.c;
 
 % Default zero offset
 phase_offset = zeros(1, length(t));
 
 % Apply Localization error 
 delta_pos = 1e-3 * randn();  % 1 mm std
-
 phi_geom = -2 * pi * fn / c * delta_pos * sin(theta);  % constant offset
+
 phase_offset = phase_offset + phi_geom;
 
 

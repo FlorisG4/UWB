@@ -1,10 +1,12 @@
-function [kappa_est, tof_nm] = estimate_kappa(I_nm,I_ref, tx_pos_CS, beta_est)
+function [kappa_est, tof_nm] = estimate_kappa(I_nm,I_ref, tx_pos_CS, beta_est, dB_thr, N_size)
 
-c = 3e8;                  % Speed of light [m/s]
-fc = 78e9;      
-Fs = 10e6;                % Sampling frequency [Hz]
-T_chirp = 25.6e-6;        % Chirp duration [s]
-BW = 250e6;     
+P = uwb_params();
+c = P.c;
+fc = P.fc;
+Fs = P.Fs;
+T_chirp = P.T_chirp;
+BW = P.BW;
+
 N_fft =1024;
 N_ffta = 1024;
 range_axis = ((0:N_fft/2-1) * Fs / N_fft) * (c * T_chirp / (2 * BW));
@@ -12,8 +14,8 @@ angle_axis = asind(linspace(-1,1,N_ffta));
 
 
 
-[peaks_nm, vals_nm] = find_peaks_2D(I_nm, -10, 3);
-[peaks_ref, vals_ref] = find_peaks_2D(I_ref, -10, 3);
+[peaks_nm, vals_nm] = find_peaks_2D(I_nm, dB_thr, N_size);
+[peaks_ref, vals_ref] = find_peaks_2D(I_ref, dB_thr, N_size);
 
 % Match closest pair (Euclidean distance)
 min_dist = Inf;
